@@ -95,6 +95,7 @@ inline void TTSParser::Init() {
   }
   file_index_ = 0;
   current_index_ = 0;
+  frame_nums_ = 0;
 }
 
 
