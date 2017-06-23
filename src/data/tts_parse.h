@@ -14,7 +14,7 @@
 
 namespace dmlc {
 namespace data {
-std::string getFileString(const std::string &filepath) {
+inline std::string getFileString(const std::string &filepath) {
   std::ifstream is(filepath);
   std::string filebuffer = "";
   if (is.is_open()) {
@@ -40,24 +40,23 @@ std::string getFileString(const std::string &filepath) {
   return filebuffer;
 }
 
-//struct TTSParserParam : public dmlc::Parameter<TTSParserParam> {
-//  int feat_dims;
-//  std::string scp_name;
-//  DMLC_DECLARE_PARAMETER(TTSParserParam) {
-//    DMLC_DECLARE_FIELD(feat_dims).set_default(0)
-//        .describe("feature dim of one row");
-//    DMLC_DECLARE_FIELD(scp_name).set_default(NULL)
-//        .describe("file list name.");
-//  }
-//};
+struct TTSParserParam : public dmlc::Parameter<TTSParserParam> {
+  int feat_dims;
+  std::string scp_name;
+  DMLC_DECLARE_PARAMETER(TTSParserParam) {
+    DMLC_DECLARE_FIELD(feat_dims).set_default(0)
+        .describe("feature dim of one row");
+    DMLC_DECLARE_FIELD(scp_name).set_default("NULL")
+        .describe("file list name.");
+  }
+};
 
-//DMLC_REGISTER_PARAMETER(TTSParserParam);
 
 class TTSParser {
 public:
   explicit TTSParser(std::string path_name, int feat_dims) {
-    scp_name_ = path_name;
-    feat_dims_ = feat_dims;
+    param_.scp_name = path_name;
+    param_.feat_dims = feat_dims;
     Init();
   }
 
@@ -72,8 +71,7 @@ public:
   void LoadOneFile(std::string filename);
 
 private:
-  std::string scp_name_;
-  int feat_dims_;
+  TTSParserParam param_;
   int current_index_;
   std::vector<real_t> rows_data_;
   std::vector<std::string> file_names_;
@@ -83,9 +81,9 @@ private:
 };
 
 inline void TTSParser::Init() {
-  FILE *fin = fopen(scp_name_.c_str(), "r");
+  FILE *fin = fopen(param_.scp_name.c_str(), "r");
   if (fin == NULL) {
-    std::cout << "open fail " << scp_name_ << std::endl;
+    std::cout << "open fail " << param_.scp_name << std::endl;
   }
   char file_name[800];
   memset(file_name, 0, sizeof(file_name));
@@ -108,20 +106,20 @@ inline void TTSParser::LoadOneFile(std::string filename) {
   int len = file_str.length() / sizeof(real_t);
   rows_data_.clear();
   rows_data_.resize(len);
-  frame_nums_ = len / feat_dims_;
+  frame_nums_ = len / param_.feat_dims;
   current_index_ = 0;
-  memcpy(rows_data_.data(), file_str.c_str(), sizeof(float) * frame_nums_ * feat_dims_);
+  memcpy(rows_data_.data(), file_str.c_str(), sizeof(float) * frame_nums_ * param_.feat_dims);
 }
 
 inline bool TTSParser::Next() {
   if (current_index_ < frame_nums_) {
-    out_ = rows_data_.data() + current_index_ * feat_dims_;
+    out_ = rows_data_.data() + current_index_ * param_.feat_dims;
     current_index_++;
     return true;
   } else {
     if (file_index_ < file_names_.size()) {
       LoadOneFile(file_names_[file_index_++]);
-      out_ = rows_data_.data() + current_index_ * feat_dims_;
+      out_ = rows_data_.data() + current_index_ * param_.feat_dims;
       current_index_++;
       return true;
     } else {

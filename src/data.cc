@@ -13,6 +13,7 @@
 #include "data/libsvm_parser.h"
 #include "data/libfm_parser.h"
 #include "data/csv_parser.h"
+#include "data/tts_parse.h"
 
 namespace dmlc {
 /*! \brief namespace for useful input data structure */
@@ -107,6 +108,7 @@ CreateIter_(const char *uri_,
 }
 
 DMLC_REGISTER_PARAMETER(CSVParserParam);
+DMLC_REGISTER_PARAMETER(TTSParserParam);
 }  // namespace data
 
 // template specialization
