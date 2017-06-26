@@ -6,11 +6,13 @@
 #define MXNET_TTS_PARSE_H
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
+#include <dmlc/common.h>
 #include <dmlc/parameter.h>
 #include <dmlc/data.h>
 #include <fstream>
 #include <string>
 #include <cstring>
+#include "../io/filesys.h"
 
 namespace dmlc {
 namespace data {
@@ -23,13 +25,8 @@ inline std::string getFileString(const std::string &filepath) {
     long long length = is.tellg();
     is.seekg(0, is.beg);
     char *buffer = new char[length];
-    std::cout << "Reading " << filepath << " " << length << " characters... ";
-    // read data as a block:
+    //std::cout << "Reading " << filepath << " " << length << " characters... ";
     is.read(buffer, length);
-    if (is)
-      std::cout << "done." << std::endl;
-    else
-      std::cout << "error: only " << is.gcount() << " could be read";
     is.close();
     // ...buffer contains the entire file...
     filebuffer = std::string(buffer, length);
@@ -38,6 +35,13 @@ inline std::string getFileString(const std::string &filepath) {
     std::cout << filepath << "open faild in getFileString" << std::endl;
   }
   return filebuffer;
+}
+
+inline std::string StripEnd(std::string str, char ch) {
+  while (str.length() != 0 && str[str.length() - 1] == ch) {
+    str.resize(str.length() - 1);
+  }
+  return str;
 }
 
 struct TTSParserParam : public dmlc::Parameter<TTSParserParam> {
@@ -81,15 +85,33 @@ private:
 };
 
 inline void TTSParser::Init() {
-  FILE *fin = fopen(param_.scp_name.c_str(), "r");
-  if (fin == NULL) {
-    std::cout << "open fail " << param_.scp_name << std::endl;
-  }
-  char file_name[800];
-  memset(file_name, 0, sizeof(file_name));
-  while (fscanf(fin, "%s%*c", file_name) != EOF) {
-    std::cout << file_name << std::endl;
-    file_names_.push_back(file_name);
+  dmlc::io::URI path(param_.scp_name.c_str());
+  size_t pos = path.name.rfind('/');
+  if (pos == std::string::npos || pos + 1 == path.name.length()) {
+    dmlc::io::URI dir = path;
+    dir.name = path.name.substr(0, pos);
+    std::vector<dmlc::io::FileInfo> dfiles;
+    dmlc::io::FileSystem::GetInstance(path)->ListDirectory(dir, &dfiles);
+    for (size_t i = 0; i < dfiles.size(); ++i) {
+      file_names_.push_back(dfiles[i].path.name);
+    }
+  } else {
+    pos = path.name.find(';');
+    if (pos == std::string::npos) { //没有分号，说明是scp文件
+      FILE *fin = fopen(param_.scp_name.c_str(), "r");
+      if (fin == NULL) {
+        std::cout << "open fail " << param_.scp_name << std::endl;
+      }
+      char file_name[800];
+      memset(file_name, 0, sizeof(file_name));
+      while (fscanf(fin, "%s%*c", file_name) != EOF) {
+        std::cout << file_name << std::endl;
+        file_names_.push_back(file_name);
+      }
+    } else {
+      const char dlm = ';';
+      file_names_ = Split(param_.scp_name, dlm);
+    }
   }
   file_index_ = 0;
   current_index_ = 0;
