@@ -32,7 +32,7 @@ class ParserImpl : public Parser<IndexType> {
       while (data_ptr_ < data_end_) {
         data_ptr_ += 1;
         if (data_[data_ptr_ - 1].Size() != 0) {
-          block_ = data_[data_ptr_ - 1].GetBlock();
+          block_ = data_[data_ptr_ - 1].GetBlock(); //返回block，包含多行
           return true;
         }
       }
